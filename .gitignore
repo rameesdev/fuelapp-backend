@@ -1,0 +1,5 @@
+node_modules
+firebase-adminsdk.json
+index copy.js
+test.js
+.env
