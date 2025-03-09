@@ -66,7 +66,7 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
-
+app.get("/status",(req,res)=>res.json("OK"))
 // Register route
 app.post("/register", async (req, res) => {
   try {
