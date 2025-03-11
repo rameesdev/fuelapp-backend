@@ -293,7 +293,7 @@ wss.on("connection", (ws, req) => {
       }
 
       // User confirms fuel dispensing
-      if (data.type === "CONFIRM_DISPENSING") {
+      if (data.type === "confirm_dispensing") {
         const { orderId, confirm } = data;
         
         if (confirm) {
