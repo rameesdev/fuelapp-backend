@@ -49,6 +49,7 @@ const fuelOrderSchema = new mongoose.Schema({
   status: { type: String, default: "Pending" },
   fuelType: String,
   amount: Number,
+  deviceId: String, // Add deviceId to track which device should dispense fuel
 });
 const FuelOrder = mongoose.model("FuelOrder", fuelOrderSchema);
 app.use(express.json());
@@ -129,12 +130,10 @@ app.get("/vehicles", authenticateToken, async (req, res) => {
   }
 });
 
-
-
 // Create a fuel order
 app.post("/orders", authenticateToken, async (req, res) => {
   try {
-    const { vehicleId, fuelType, amount } = req.body;
+    const { vehicleId, fuelType, amount, deviceId } = req.body;
 
     const existingOrder = await FuelOrder.findOne({ 
       vehicleId, 
@@ -150,6 +149,7 @@ app.post("/orders", authenticateToken, async (req, res) => {
       vehicleId,
       fuelType,
       amount,
+      deviceId: deviceId || "esp32_fuel_dispenser_01", // Default device ID if not provided
     });
 
     await newOrder.save();
@@ -158,6 +158,7 @@ app.post("/orders", authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Error creating order" });
   }
 });
+
 app.post("/update-fcm-token", authenticateToken, async (req, res) => {
   try {
     const { fcmToken } = req.body;
@@ -194,12 +195,12 @@ app.get("/orders", authenticateToken, async (req, res) => {
   }
 });
 
-
-// WebSocket connection for ESP32
-const userSockets = new Map();
-const admin = require("firebase-admin");
+// WebSocket connection handling
+const userSockets = new Map(); // Map userId -> WebSocket
+const deviceSockets = new Map(); // Map deviceId -> WebSocket
 
 // Initialize Firebase Admin SDK
+const admin = require("firebase-admin");
 const serviceAccount = require("./firebase-adminsdk.json");
 
 admin.initializeApp({
@@ -208,37 +209,64 @@ admin.initializeApp({
 
 // WebSocket server logic
 wss.on("connection", (ws, req) => {
-  console.log("Client connected");
+  console.log("New client connected");
 
   ws.on("message", async (message) => {
     try {
       const data = JSON.parse(message);
-      console.log(data);
+      console.log("Received message:", data);
 
+      // User registration in WebSocket
       if (data.type === "register") {
         userSockets.set(data.userId, ws);
         console.log(`User ${data.userId} registered for WebSocket updates.`);
       }
 
+      // Device registration in WebSocket
+      if (data.type === "device_register") {
+        const deviceId = data.deviceId;
+        deviceSockets.set(deviceId, ws);
+        console.log(`Device ${deviceId} registered.`);
+        
+        // Send acknowledgment back to device
+        ws.send(JSON.stringify({
+          type: "register_ack",
+          deviceId: deviceId,
+          status: "success"
+        }));
+      }
+
+      // Vehicle detection from RFID reader
       if (data.type === "vehicle_entry") {
         const vehicleNumber = data.vehicleNumber;
-        console.log(`Vehicle arrived: ${vehicleNumber}`);
+        const deviceId = data.deviceId;
+        
+        console.log(`Vehicle detected: ${vehicleNumber} at device: ${deviceId}`);
 
+        // Find vehicle in database
         const vehicle = await Vehicle.findOne({ registrationNo: vehicleNumber });
         if (!vehicle) {
           console.log(`Vehicle ${vehicleNumber} not found in database.`);
           return;
         }
 
+        // Find pending order for this vehicle
         const pendingOrder = await FuelOrder.findOne({
           vehicleId: vehicle._id,
           status: "Pending",
-        }).populate("vehicleId");
+        }).populate("vehicleId userId");
 
         if (pendingOrder) {
           console.log(`Pending order found for ${vehicleNumber}, notifying user...`);
+          
+          // Update the order with the device that detected the vehicle
+          await FuelOrder.updateOne(
+            { _id: pendingOrder._id },
+            { deviceId: deviceId }
+          );
 
-          const userSocket = userSockets.get(pendingOrder.userId.toString());
+          // Notify user via WebSocket if connected
+          const userSocket = userSockets.get(pendingOrder.userId._id.toString());
           if (userSocket && userSocket.readyState === WebSocket.OPEN) {
             userSocket.send(
               JSON.stringify({
@@ -248,49 +276,126 @@ wss.on("connection", (ws, req) => {
                   vehicleNumber: pendingOrder.vehicleId.registrationNo,
                   fuelType: pendingOrder.fuelType,
                   amount: pendingOrder.amount,
+                  deviceId: deviceId
                 },
               })
             );
-            console.log(`Alert sent to user ${pendingOrder.userId} for confirmation.`);
-
-            // Send Push Notification to User
-            await sendPushNotification(pendingOrder.userId, pendingOrder);
+            console.log(`Alert sent to user ${pendingOrder.userId._id} for confirmation.`);
           } else {
-            console.log(`User ${pendingOrder.userId} is not connected via WebSocket.`);
-            await sendPushNotification(pendingOrder.userId, pendingOrder);
+            console.log(`User ${pendingOrder.userId._id} is not connected via WebSocket.`);
           }
+          
+          // Always send push notification
+          await sendPushNotification(pendingOrder.userId._id, pendingOrder);
         } else {
           console.log(`No pending order found for ${vehicleNumber}.`);
         }
       }
 
+      // User confirms fuel dispensing
       if (data.type === "confirm_dispensing") {
         const { orderId, confirm } = data;
         
         if (confirm) {
-          await FuelOrder.updateOne({ _id: orderId }, { status: "Confirmed" });
+          // Get order details
+          const order = await FuelOrder.findById(orderId);
+          if (!order) {
+            console.log(`Order ${orderId} not found.`);
+            return;
+          }
+          
+          // Update order status
+          await FuelOrder.updateOne({ _id: orderId }, { status: "Dispensing" });
           console.log(`Order ${orderId} confirmed for dispensing.`);
           
-          // Get the order details to send to ESP32
-          const order = await FuelOrder.findById(orderId);
-          
-          // Send dispense command to the specific ESP32
-          if (order && clients[order.deviceId]) {
+          // Get the device WebSocket connection
+          const deviceSocket = deviceSockets.get(order.deviceId);
+          if (deviceSocket && deviceSocket.readyState === WebSocket.OPEN) {
+            // Send dispense command to the ESP32 device
             const dispenseCommand = {
               type: "dispense_fuel",
-              amount: order.fuelAmount,
-              orderId: orderId
+              amount: order.amount,
+              orderId: orderId.toString()
             };
             
-            clients[order.deviceId].send(JSON.stringify(dispenseCommand));
+            deviceSocket.send(JSON.stringify(dispenseCommand));
             console.log(`Fuel dispensing command sent to device ${order.deviceId} for order ${orderId}`);
           } else {
-            console.log(`Cannot send dispensing command: Device ${order?.deviceId || 'unknown'} not connected`);
+            console.log(`Cannot send dispensing command: Device ${order.deviceId} not connected`);
           }
         } else {
           await FuelOrder.updateOne({ _id: orderId }, { status: "Rejected" });
-          console.log(`Order ${orderId} not confirmed.`);
+          console.log(`Order ${orderId} rejected.`);
         }
+      }
+
+      // Handle dispense acknowledgment
+      if (data.type === "dispense_acknowledge") {
+        const { orderId, deviceId, status } = data;
+        console.log(`Dispensing acknowledgment received from ${deviceId} for order ${orderId}: ${status}`);
+      }
+
+      // Handle dispensing status updates
+      if (data.type === "dispense_status") {
+        const { litres, deviceId, orderId } = data;
+        console.log(`Dispensing status: ${litres} litres dispensed for order ${orderId}`);
+        
+        // Find the order
+        const order = await FuelOrder.findById(orderId);
+        if (order) {
+          // Find user socket to send updates
+          const userSocket = userSockets.get(order.userId.toString());
+          if (userSocket && userSocket.readyState === WebSocket.OPEN) {
+            userSocket.send(JSON.stringify({
+              type: "dispensing_progress",
+              orderId: orderId,
+              litres: litres,
+              total: order.amount
+            }));
+          }
+        }
+      }
+
+      // Handle dispensing complete
+      if (data.type === "dispense_complete") {
+        const { totalLitres, deviceId, orderId } = data;
+        console.log(`Dispensing complete: ${totalLitres} litres for order ${orderId}`);
+        
+        // Update order status in database
+        await FuelOrder.updateOne(
+          { _id: orderId },
+          { 
+            status: "Completed",
+            amount: totalLitres // Update with actual amount dispensed
+          }
+        );
+        
+        // Find the order to get user info
+        const order = await FuelOrder.findById(orderId).populate("userId");
+        if (order) {
+          // Notify user via WebSocket if connected
+          const userSocket = userSockets.get(order.userId._id.toString());
+          if (userSocket && userSocket.readyState === WebSocket.OPEN) {
+            userSocket.send(JSON.stringify({
+              type: "dispensing_complete",
+              orderId: orderId,
+              totalLitres: totalLitres
+            }));
+          }
+          
+          // Send push notification
+          await sendPushNotification(order.userId._id, {
+            _id: orderId,
+            fuelType: order.fuelType,
+            amount: totalLitres,
+            status: "Completed"
+          }, true);
+        }
+      }
+
+      // Handle pong response from device
+      if (data.type === "pong") {
+        console.log(`Received pong from device ${data.deviceId}, status: ${data.status}`);
       }
     } catch (error) {
       console.error("Error processing WebSocket message:", error);
@@ -300,9 +405,20 @@ wss.on("connection", (ws, req) => {
   ws.on("close", () => {
     console.log("Client disconnected");
 
+    // Remove from user sockets if it was a user
     for (const [userId, socket] of userSockets.entries()) {
       if (socket === ws) {
         userSockets.delete(userId);
+        console.log(`User ${userId} disconnected`);
+        break;
+      }
+    }
+
+    // Remove from device sockets if it was a device
+    for (const [deviceId, socket] of deviceSockets.entries()) {
+      if (socket === ws) {
+        deviceSockets.delete(deviceId);
+        console.log(`Device ${deviceId} disconnected`);
         break;
       }
     }
@@ -310,19 +426,33 @@ wss.on("connection", (ws, req) => {
 });
 
 // Send Push Notification to User
-async function sendPushNotification(userId, order) {
+async function sendPushNotification(userId, order, isComplete = false) {
   try {
-    // Fetch the user's FCM token from the database (Assuming you store it in the User model)
+    // Fetch the user's FCM token from the database
     const user = await User.findById(userId);
     if (!user || !user.fcmToken) {
       console.log("FCM Token not found for user:", userId);
       return;
     }
 
+    let title, body;
+    
+    if (isComplete) {
+      title = "Fuel Dispensing Complete";
+      body = `Your fuel order (${order.fuelType}, ${order.amount}L) has been successfully dispensed.`;
+    } else {
+      title = "Fuel Dispensing Ready";
+      body = `Your vehicle has been detected at the fuel station. Confirm to dispense ${order.amount}L of ${order.fuelType}.`;
+    }
+
     const message = {
       notification: {
-        title: "Fuel Dispensing Confirmation",
-        body: `Your fuel order (${order.fuelType}, ${order.amount}L) is ready for dispensing.`,
+        title: title,
+        body: body,
+      },
+      data: {
+        orderId: order._id.toString(),
+        status: order.status,
       },
       token: user.fcmToken,
     };
@@ -335,9 +465,23 @@ async function sendPushNotification(userId, order) {
   }
 }
 
+// Function to ping all connected devices periodically
+function pingAllDevices() {
+  for (const [deviceId, socket] of deviceSockets.entries()) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: "ping",
+        timestamp: Date.now()
+      }));
+    }
+  }
+}
+
+// Set up periodic ping every 30 seconds
+setInterval(pingAllDevices, 30000);
 
 // Start the server
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
