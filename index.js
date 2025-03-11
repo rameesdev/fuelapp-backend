@@ -266,11 +266,29 @@ wss.on("connection", (ws, req) => {
 
       if (data.type === "confirm_dispensing") {
         const { orderId, confirm } = data;
-
+        
         if (confirm) {
           await FuelOrder.updateOne({ _id: orderId }, { status: "Confirmed" });
           console.log(`Order ${orderId} confirmed for dispensing.`);
+          
+          // Get the order details to send to ESP32
+          const order = await FuelOrder.findById(orderId);
+          
+          // Send dispense command to the specific ESP32
+          if (order && clients[order.deviceId]) {
+            const dispenseCommand = {
+              type: "dispense_fuel",
+              amount: order.fuelAmount,
+              orderId: orderId
+            };
+            
+            clients[order.deviceId].send(JSON.stringify(dispenseCommand));
+            console.log(`Fuel dispensing command sent to device ${order.deviceId} for order ${orderId}`);
+          } else {
+            console.log(`Cannot send dispensing command: Device ${order?.deviceId || 'unknown'} not connected`);
+          }
         } else {
+          await FuelOrder.updateOne({ _id: orderId }, { status: "Rejected" });
           console.log(`Order ${orderId} not confirmed.`);
         }
       }
