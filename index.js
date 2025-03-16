@@ -9,7 +9,8 @@ require("dotenv").config();
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
-
+const cookieParser = require("cookie-parser");
+app.use(cookieParser())
 const SECRET_KEY = "your_secret_key"; // Change this to a strong secret
 
 // MongoDB connection
@@ -22,7 +23,25 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model("User", userSchema);
+function authenticateAdmin(req, res, next) {
+  const token = req.cookies.adminToken; // Get token from cookies
 
+  if (!token) {
+      return res.status(401).json({ message: "Access Denied: No Token Provided" });
+  }
+
+  try {
+      const verified = jwt.verify(token, SECRET_KEY); // Ensure JWT_SECRET is set in .env
+      
+      if (verified.admin !== "admin") {
+          return res.status(403).json({ message: "Access Denied: Not an Admin" });
+      }
+      req.admin = verified;
+      next();
+  } catch (err) {
+      res.status(400).json({ message: "Invalid Token" });
+  }
+};
 // Vehicle schema and model
 const vehicleSchema = new mongoose.Schema({
   userId: { 
@@ -198,7 +217,7 @@ app.get("/orders", authenticateToken, async (req, res) => {
 // WebSocket connection handling
 const userSockets = new Map(); // Map userId -> WebSocket
 const deviceSockets = new Map(); // Map deviceId -> WebSocket
-
+const adminSockets = new Map();
 // Initialize Firebase Admin SDK
 const admin = require("firebase-admin");
 const serviceAccount = require("./firebase-adminsdk.json");
@@ -206,13 +225,21 @@ const serviceAccount = require("./firebase-adminsdk.json");
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
-
+function broadcastToAdmins(message) {
+  for (const [adminId, socket] of adminSockets.entries()) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+    }
+  }
+}
 // WebSocket server logic
 wss.on("connection", (ws, req) => {
   console.log("New client connected");
-
+  
   ws.on("message", async (message) => {
     try {
+      
+      broadcastToAdmins(message)
       const data = JSON.parse(message);
       console.log("Received message:", data);
 
@@ -220,6 +247,10 @@ wss.on("connection", (ws, req) => {
       if (data.type === "register") {
         userSockets.set(data.userId, ws);
         console.log(`User ${data.userId} registered for WebSocket updates.`);
+      }
+      if (data.type === "admin_register") {
+        adminSockets.set(data.adminId, ws);
+        console.log(`Admin ${data.adminId} registered for WebSocket updates.`);
       }
 
       // Device registration in WebSocket
@@ -413,12 +444,21 @@ wss.on("connection", (ws, req) => {
         break;
       }
     }
-
+    for (const [adminId, socket] of adminSockets.entries()) {
+      if (socket === ws) {
+        adminSockets.delete(adminId);
+        console.log(`Admin ${adminId} disconnected`);
+        break;
+      }
+    }
     // Remove from device sockets if it was a device
     for (const [deviceId, socket] of deviceSockets.entries()) {
       if (socket === ws) {
         deviceSockets.delete(deviceId);
         console.log(`Device ${deviceId} disconnected`);
+        broadcastToAdmins(Buffer.from(JSON.stringify({ type: "device_disc" })));
+
+
         break;
       }
     }
@@ -476,7 +516,98 @@ function pingAllDevices() {
     }
   }
 }
+const path = require("path");
+const { Console } = require("console");
+app.get("/", (req, res) => {
+  const token = req.cookies.adminToken
+  console.log(token)
 
+  if (!token) {
+      return res.sendFile(path.join(__dirname, "public/login.html")); // Send login page if no token
+  }
+
+  // Verify token
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+      if (err) {
+          return res.sendFile(path.join(__dirname, "public/login.html")); // If invalid token, show login page
+      }
+      res.sendFile(path.join(__dirname, "public/admin.html")); // If valid token, serve admin panel
+  });
+});
+
+// Admin login route - sets cookie and serves admin.html
+app.post("/admin/login", (req, res) => {
+  const { username, password } = req.body;
+
+  // Replace with actual database check
+  const adminUser = { username: "admin", password: "admin123" };
+
+  if (username !== adminUser.username || password !== adminUser.password) {
+      return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  // Generate JWT token (no expiration)
+  const token = jwt.sign({ admin: username }, SECRET_KEY);
+
+  // Set cookie and send admin.html
+  res.cookie("adminToken", token, { httpOnly: true, secure: false });
+  res.json({ redirect: "/" }); // Frontend will redirect
+});
+
+// Admin logout - clears token and redirects to login
+app.post("/admin/logout", (req, res) => {
+  res.clearCookie("adminToken");
+  res.json({ redirect: "/" }); // Redirect back to login page
+});
+app.get("/admin/data", authenticateAdmin, async (req, res) => {
+  try {
+      let vehicles = await Vehicle.find();
+      var orders = await FuelOrder.find().lean().sort({date:-1}).populate({
+        path: "vehicleId", // Populating vehicleId
+        select: "registrationNo" // Selecting the 'registrationNo' (vehicleNumber) field
+      });
+      vehicles = await Promise.all(
+        vehicles.map(async (vehicle) => {
+            const owner = await User.findById(vehicle.userId).select("username"); // Get only username
+            return {
+                ...vehicle.toObject(), // Ensure it's a plain object
+                owner: owner ? owner.username : "Unknown"
+            };
+        })
+    );
+      orders = await Promise.all(
+        orders.map(async (order) => {
+            const owner = await User.findById(order.userId).select("username"); // Get only username
+            return {
+                ...order, // Spread order object (Mongoose already returns plain JS objects)
+                owner: owner ? owner.username : "Unknown" // Attach owner username
+            };
+        })
+    );
+    
+    
+    // Map over the orders to include vehicleNumber directly in the response
+    orders = orders.map(order => {
+      return {
+        ...order,
+        vehicleNumber: order.vehicleId.registrationNo 
+      };
+    });
+    const devices = [];
+
+        for (const [deviceId, socket] of deviceSockets.entries()) {
+            devices.push({
+                deviceId,
+                status: socket.readyState === WebSocket.OPEN ? "Connected" : "Disconnected"
+            });
+        }
+
+      res.json({ vehicles, orders ,devices});
+  } catch (error) {
+      console.error("Error fetching data:", error);
+      res.status(500).json({ message: "Internal Server Error" });
+  }
+});
 // Set up periodic ping every 30 seconds
 setInterval(pingAllDevices, 30000);
 

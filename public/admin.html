@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Fuel System Admin Panel</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100">
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-blue-800 text-white shadow">
+            <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+                <h1 class="text-2xl font-bold">Fuel System Admin Panel</h1>
+                <div class="flex items-center">
+                    <span id="connection-status" class="mr-3">
+                        <i class="fas fa-circle text-red-500"></i> Disconnected
+                    </span>
+                    <div class="relative inline-block text-left">
+                        <button id="profileBtn" class="flex items-center space-x-2">
+                            <span class="bg-blue-700 rounded-full h-8 w-8 flex items-center justify-center">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            <span>Admin</span>
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="flex-grow flex">
+            <!-- Sidebar -->
+            <div class="w-64 bg-blue-900 text-white shadow-lg">
+                <nav class="p-4">
+                    <ul>
+                        <li class="mb-2">
+                            <a href="#dashboard" class="nav-link active block p-2 rounded hover:bg-blue-800"
+                                data-section="dashboard">
+                                <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#devices" class="nav-link block p-2 rounded hover:bg-blue-800"
+                                data-section="devices">
+                                <i class="fas fa-microchip mr-2"></i> Devices
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#orders" class="nav-link block p-2 rounded hover:bg-blue-800"
+                                data-section="orders">
+                                <i class="fas fa-file-invoice mr-2"></i> Orders
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#vehicles" class="nav-link block p-2 rounded hover:bg-blue-800"
+                                data-section="vehicles">
+                                <i class="fas fa-car mr-2"></i> Vehicles
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#logs" class="nav-link block p-2 rounded hover:bg-blue-800" data-section="logs">
+                                <i class="fas fa-list mr-2"></i> System Logs
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" id="logoutLink"
+                                class="block p-2 rounded hover:bg-red-600 text-red-400 hover:text-white">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-grow p-6">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="section active">
+                    <h2 class="text-2xl font-bold mb-6">Dashboard</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="rounded-full bg-blue-100 p-3 mr-4">
+                                    <i class="fas fa-gas-pump text-blue-500 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg text-gray-500">Active Orders</h3>
+                                    <p id="active-orders" class="text-2xl font-bold">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="rounded-full bg-green-100 p-3 mr-4">
+                                    <i class="fas fa-check text-green-500 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg text-gray-500">Completed Today</h3>
+                                    <p id="completed-orders" class="text-2xl font-bold">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="rounded-full bg-purple-100 p-3 mr-4">
+                                    <i class="fas fa-microchip text-purple-500 text-2xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg text-gray-500">Active Devices</h3>
+                                    <p id="active-devices" class="text-2xl font-bold">0</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-8">
+                        <h3 class="text-xl font-bold mb-4">Current Activity</h3>
+                        <div class="bg-white rounded-lg shadow overflow-hidden">
+                            <div class="p-4 bg-gray-50 border-b">
+                                <h4 class="font-medium">Live Dispensing</h4>
+                            </div>
+                            <div id="live-dispensing" class="p-4">
+                                <div class="text-center text-gray-500 py-8">No active dispensing</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-lg shadow overflow-hidden">
+                            <div class="p-4 bg-gray-50 border-b">
+                                <h4 class="font-medium">Recent Vehicle Entries</h4>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="bg-gray-50">
+                                            <th class="px-4 py-2 text-left">Vehicle</th>
+                                            <th class="px-4 py-2 text-left">Device</th>
+                                            <th class="px-4 py-2 text-left">Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vehicle-entries">
+                                        <tr>
+                                            <td colspan="3" class="px-4 py-6 text-center text-gray-500">No recent
+                                                entries</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow overflow-hidden">
+                            <div class="p-4 bg-gray-50 border-b">
+                                <h4 class="font-medium">Recent Orders</h4>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="bg-gray-50">
+                                            <th class="px-4 py-2 text-left">Order ID</th>
+                                            <th class="px-4 py-2 text-left">Vehicle</th>
+                                            <th class="px-4 py-2 text-left">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-orders">
+                                        <tr>
+                                            <td colspan="3" class="px-4 py-6 text-center text-gray-500">No recent orders
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Devices Section -->
+                <section id="devices" class="section hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">Devices Management</h2>
+                        <button id="add-device-btn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">
+                            <i class="fas fa-plus mr-2"></i> Add Device
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+                            <h4 class="font-medium">Registered Devices</h4>
+                            <div class="flex items-center">
+                                <div class="relative">
+                                    <input type="text" placeholder="Search devices"
+                                        class="border rounded-lg px-3 py-2 pl-8 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <div class="absolute left-2 top-2.5">
+                                        <i class="fas fa-search text-gray-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-4 py-2 text-left">Device ID</th>
+                                        <th class="px-4 py-2 text-left">Location</th>
+                                        <th class="px-4 py-2 text-left">Status</th>
+                                        <th class="px-4 py-2 text-left">Last Ping</th>
+                                        <th class="px-4 py-2 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="device-list">
+                                    <tr>
+                                        <td colspan="5" class="px-4 py-6 text-center text-gray-500">No devices
+                                            registered</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Orders Section -->
+                <section id="orders" class="section hidden">
+                    <h2 class="text-2xl font-bold mb-6">Orders Management</h2>
+
+                    <div class="bg-white rounded-lg shadow mb-6 p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status Filter</label>
+                                <select
+                                    class="border w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">All Statuses</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Dispensing">Dispensing</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Rejected">Rejected</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+                                <input type="date"
+                                    class="border w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Vehicle Number</label>
+                                <input type="text" placeholder="Search by vehicle"
+                                    class="border w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex items-end">
+                                <button class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg w-full">
+                                    Apply Filters
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-4 py-2 text-left">Order ID</th>
+                                        <th class="px-4 py-2 text-left">Vehicle</th>
+                                        <th class="px-4 py-2 text-left">User</th>
+                                        <th class="px-4 py-2 text-left">Fuel Type</th>
+                                        <th class="px-4 py-2 text-left">Amount (L)</th>
+                                        <th class="px-4 py-2 text-left">Status</th>
+                                        <th class="px-4 py-2 text-left">Device</th>
+                                        <th class="px-4 py-2 text-left">Created At</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orders-list">
+                                    <tr>
+                                        <td colspan="8" class="px-4 py-6 text-center text-gray-500">No orders found</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-4 border-t flex justify-between items-center">
+                            <div>
+                                <span class="text-sm text-gray-600">Showing 0 orders</span>
+                            </div>
+                            <div class="flex items-center">
+                                <button disabled
+                                    class="border rounded-l px-3 py-1 bg-gray-100 text-gray-400">Previous</button>
+                                <button disabled
+                                    class="border rounded-r px-3 py-1 bg-gray-100 text-gray-400">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Vehicles Section -->
+                <section id="vehicles" class="section hidden">
+                    <h2 class="text-2xl font-bold mb-6">Vehicles Management</h2>
+
+                    <div class="bg-white rounded-lg shadow mb-6 p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Registration Number</label>
+                                <input type="text" placeholder="Search by reg. number"
+                                    class="border w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">User</label>
+                                <input type="text" placeholder="Search by user"
+                                    class="border w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="flex items-end">
+                                <button class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg w-full">
+                                    Search Vehicles
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-4 py-2 text-left">Registration No.</th>
+                                        <th class="px-4 py-2 text-left">Owner</th>
+                                        <th class="px-4 py-2 text-left">Vehicle Type</th>
+                                        <th class="px-4 py-2 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vehicles-list">
+                                    <tr>
+                                        <td colspan="6" class="px-4 py-6 text-center text-gray-500">No vehicles found
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Logs Section -->
+                <section id="logs" class="section hidden">
+                    <h2 class="text-2xl font-bold mb-6">System Logs</h2>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+                            <h4 class="font-medium">Activity Log</h4>
+                            <div class="flex items-center space-x-2">
+                                <select
+                                    class="border rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="all">All Events</option>
+                                    <option value="vehicle_entry">Vehicle Entry</option>
+                                    <option value="dispensing">Dispensing</option>
+                                    <option value="device">Device</option>
+                                    <option value="system">System</option>
+                                </select>
+                                <button class="bg-gray-200 hover:bg-gray-300 rounded-full p-1">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="h-96 overflow-y-auto p-4" id="log-entries">
+                            <div class="text-center text-gray-500 py-8">No log entries</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Device Modal -->
+    <div id="add-device-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-medium">Register New Device</h3>
+                <button id="close-device-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="device-form">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Device ID</label>
+                        <input type="text" name="deviceId"
+                            class="border w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <input type="text" name="location"
+                            class="border w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea name="description" rows="3"
+                            class="border w-full rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" id="cancel-device"
+                            class="border rounded-lg px-4 py-2 hover:bg-gray-100">Cancel</button>
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2">Register
+                            Device</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div id="order-details-modal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-medium">Order Details</h3>
+                <button id="close-order-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6" id="order-details-content">
+                <!-- Order details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const connectionStatus = document.getElementById('connection-status');
+        const addDeviceBtn = document.getElementById('add-device-btn');
+        const addDeviceModal = document.getElementById('add-device-modal');
+        const closeDeviceModal = document.getElementById('close-device-modal');
+        const cancelDevice = document.getElementById('cancel-device');
+        const deviceForm = document.getElementById('device-form');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.section');
+        const orderDetailsModal = document.getElementById('order-details-modal');
+        const closeOrderModal = document.getElementById('close-order-modal');
+        const logEntries = document.getElementById('log-entries');
+        const liveDispensing = document.getElementById('live-dispensing');
+        const vehicleEntries = document.getElementById('vehicle-entries');
+        const deviceList = document.getElementById('device-list');
+        const ordersList = document.getElementById('orders-list');
+        const recentOrders = document.getElementById('recent-orders');
+        const vehiclesList = document.getElementById('vehicles-list');
+        const activeOrders = document.getElementById('active-orders');
+        const completedOrders = document.getElementById('completed-orders');
+        const activeDevices = document.getElementById('active-devices');
+
+        // WebSocket Connection
+        let socket;
+        let isConnected = false;
+        let devices = new Map();
+        let activeDispensing = new Map();
+        let recentEntries = [];
+        document.getElementById("logoutLink").addEventListener("click", async function (event) {
+            event.preventDefault();
+
+            const response = await fetch("/admin/logout", { method: "POST", credentials: "include" });
+            const data = await response.json();
+            if (response.ok) {
+                window.location.href = data.redirect; // Redirects to login page
+            }
+        });
+        // Sample initial data (would be fetched from API in a real implementation)
+        async function fetchAdminData() {
+            try {
+                const response = await fetch("http://localhost:3000/admin/data", {
+                    method: "GET",
+                    credentials: "include" // Ensures cookies are sent with request
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    sampleOrders = data.orders
+                    sampleVehicles = data.vehicles
+                    sampleDevices  = data.devices
+                    console.log("Vehicles:", data.vehicles);
+                    console.log("Orders:", data.devices);
+
+                } else {
+                    console.error("Error:", data.message);
+                }
+            } catch (error) {
+                console.error("Request failed:", error);
+            }
+        }
+
+
+
+        var sampleDevices;
+
+        var sampleOrders;
+
+        var sampleVehicles;
+
+        // Initialize the admin panel with sample data
+        async function initializePanel() {
+            await fetchAdminData();
+            updateDevicesList();
+            updateOrdersList();
+            updateVehiclesList();
+            updateStats();
+
+            // Add event listeners
+            addDeviceBtn.addEventListener('click', showAddDeviceModal);
+            closeDeviceModal.addEventListener('click', hideAddDeviceModal);
+            cancelDevice.addEventListener('click', hideAddDeviceModal);
+            deviceForm.addEventListener('submit', handleDeviceSubmit);
+            closeOrderModal.addEventListener('click', hideOrderModal);
+
+            // Tab navigation
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const target = link.getAttribute('data-section');
+                    navLinks.forEach(l => l.classList.remove('active', 'bg-blue-800'));
+                    link.classList.add('active', 'bg-blue-800');
+                    sections.forEach(section => {
+                        section.classList.add('hidden');
+                        if (section.id === target) {
+                            section.classList.remove('hidden');
+                        }
+                    });
+                });
+            });
+
+            // Connect WebSocket
+            connectWebSocket();
+        }
+
+        // WebSocket functions
+        function connectWebSocket() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+
+            // For development, you might use a hardcoded URL
+            // const wsUrl = 'ws://localhost:3000/ws';
+
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function () {
+                isConnected = true;
+                updateConnectionStatus(true);
+                logSystemEvent('Connected to WebSocket server');
+
+                // Register admin with WebSocket
+                socket.send(JSON.stringify({
+                    type: 'admin_register',
+                    adminId: 'ADMIN001' // This should be dynamic based on login
+                }));
+            };
+
+            socket.onclose = function () {
+                isConnected = false;
+                updateConnectionStatus(false);
+                logSystemEvent('Disconnected from WebSocket server');
+
+                // Attempt to reconnect after 5 seconds
+                setTimeout(connectWebSocket, 5000);
+            };
+
+            socket.onerror = function (error) {
+                logSystemEvent('WebSocket error: ' + error.message);
+            };
+
+            socket.onmessage =async function (event) {
+
+                handleWebSocketMessage(event.data);
+                
+            };
+        }
+
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                connectionStatus.innerHTML = '<i class="fas fa-circle text-green-500"></i> Connected';
+            } else {
+                connectionStatus.innerHTML = '<i class="fas fa-circle text-red-500"></i> Disconnected';
+            }
+        }
+
+        async function handleWebSocketMessage(message) {
+            try {
+                const bufferData = JSON.parse(message);
+
+                // Convert Uint8Array to string
+                const decodedMessage = new TextDecoder().decode(new Uint8Array(bufferData.data));
+
+                // Parse the final JSON message
+                const data = JSON.parse(decodedMessage);
+
+
+                console.log(data)
+                logSystemEvent(`Received: ${data.type}`);
+
+                switch (data.type) {
+                    case 'vehicle_entry':
+                        handleVehicleEntry(data);
+                        break;
+                    case 'confirm_fuel_dispensing':
+                        handleFuelConfirmation(data);
+                        break;
+                    case 'dispensing_progress':
+                        handleDispensingProgress(data);
+                        break;
+                    case 'dispensing_complete':
+                        handleDispensingComplete(data);
+                        break;
+                    case 'device_status':
+                        updateDeviceStatus(data);
+                        break;
+                    case 'register_ack':
+                        logSystemEvent(`Device registered: ${data.deviceId}`);
+                        
+                        break;
+                    case 'device_register':
+                        await fetchAdminData();
+                updateDevicesList();
+                break;
+                case 'device_disc':
+                    await fetchAdminData();
+                    updateDevicesList();
+                    break;
+                }
+
+                // Update UI components
+                updateStats();
+            } catch (error) {
+                console.error('Error processing message:', error);
+            }
+        }
+
+        // Event handlers
+        function handleVehicleEntry(data) {
+            const entry = {
+                vehicleNumber: data.vehicleNumber,
+                deviceId: data.deviceId,
+                timestamp: new Date().toLocaleString()
+            };
+
+            recentEntries.unshift(entry);
+            if (recentEntries.length > 10) recentEntries.pop();
+
+            updateVehicleEntriesTable();
+            logEvent('vehicle', `Vehicle ${data.vehicleNumber} detected at device ${data.deviceId}`);
+        }
+
+        function handleFuelConfirmation(data) {
+            const order = data.order;
+            logEvent('order', `Fuel dispensing confirmation requested for vehicle ${order.vehicleNumber}`);
+
+            // Update orders list with new status
+            updateOrderStatus(order.id, 'Awaiting Confirmation');
+            updateOrdersList();
+        }
+
+        function handleDispensingProgress(data) {
+            activeDispensing.set(data.orderId, {
+                orderId: data.orderId,
+                litres: data.litres,
+                total: data.total,
+                percentage: Math.round((data.litres / data.total) * 100)
+            });
+
+            updateLiveDispensing();
+            logEvent('dispensing', `Dispensing progress: ${data.litres}L / ${data.total}L for order ${data.orderId}`);
+        }
+
+        function handleDispensingComplete(data) {
+            // Remove from active dispensing
+            activeDispensing.delete(data.orderId);
+
+            // Update order status
+            updateOrderStatus(data.orderId, 'Completed');
+
+            updateLiveDispensing();
+            updateOrdersList();
+            logEvent('dispensing', `Dispensing completed: ${data.totalLitres}L for order ${data.orderId}`);
+        }
+
+        function updateDeviceStatus(data) {
+            const device = devices.get(data.deviceId);
+            if (device) {
+                device.status = data.status;
+                device.lastPing = new Date().toLocaleString();
+                updateDevicesList();
+            }
+        }
+
+        // UI Update Functions
+        function updateStats() {
+            // Count active orders
+            const pending = sampleOrders.filter(order => order.status === 'Pending' || order.status === 'Dispensing').length;
+            activeOrders.textContent = pending;
+
+            // Count completed orders
+            const today = new Date();
+            const todayStart = new Date(today.setHours(0, 0, 0, 0)); // Start of the day
+            const todayEnd = new Date(today.setHours(23, 59, 59, 999)); // End of the day
+
+            const completed= sampleOrders.filter(order => {
+                const orderDate = new Date(order.date);
+                return order.status === "Completed" && orderDate >= todayStart && orderDate <= todayEnd;
+            }).length;
+
+            completedOrders.textContent = completed;
+
+            // Count active devices
+            const active = sampleDevices.filter(device => device.status === 'Online').length;
+            activeDevices.textContent = active;
+        }
+
+        function updateVehicleEntriesTable() {
+            if (recentEntries.length === 0) {
+                vehicleEntries.innerHTML = `<tr><td colspan="3" class="px-4 py-6 text-center text-gray-500">No recent entries</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            recentEntries.forEach(entry => {
+                html += `
+                <tr>
+                    <td class="px-4 py-2 border-b">${entry.vehicleNumber}</td>
+                    <td class="px-4 py-2 border-b">${entry.deviceId}</td>
+                    <td class="px-4 py-2 border-b">${entry.timestamp}</td>
+                </tr>
+                `;
+            });
+
+            vehicleEntries.innerHTML = html;
+        }
+
+        function updateLiveDispensing() {
+            if (activeDispensing.size === 0) {
+                liveDispensing.innerHTML = `<div class="text-center text-gray-500 py-8">No active dispensing</div>`;
+                return;
+            }
+
+            let html = '';
+            activeDispensing.forEach(dispensing => {
+                html += `
+                <div class="mb-4 p-4 border rounded-lg">
+                    <div class="flex justify-between items-center mb-2">
+                        <div>
+                            <span class="font-medium">Order ID: ${dispensing.orderId}</span>
+                        </div>
+                        <div>
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                ${dispensing.litres}L / ${dispensing.total}L
+                            </span>
+                        </div>
+                    </div>
+                    <div class="relative pt-1">
+                        <div class="overflow-hidden h-2 text-xs flex rounded bg-blue-200">
+                            <div style="width:${dispensing.percentage}%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"></div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+
+            liveDispensing.innerHTML = html;
+        }
+        function updateDevicesList() {
+    // Ensure `devices` is a Map and clear previous data
+    if (!window.devices) {
+        window.devices = new Map(); // Ensure `devices` is globally accessible
+    }
+    devices.clear(); // Clear previous data before updating
+
+    // Populate devices map with latest data
+    sampleDevices.forEach(device => {
+        devices.set(device.deviceId, device);
+    });
+
+    if (devices.size === 0) {
+        deviceList.innerHTML = `<tr><td colspan="5" class="px-4 py-6 text-center text-gray-500">No devices registered</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    devices.forEach(device => {
+        const statusClass = device.status === 'Online' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+
+        html += `
+        <tr>
+            <td class="px-4 py-2 border-b">${device.deviceId}</td>
+            <td class="px-4 py-2 border-b">${device.location}</td>
+            <td class="px-4 py-2 border-b">
+                <span class="px-2 py-1 rounded-full text-xs ${statusClass}">
+                    ${device.status}
+                </span>
+            </td>
+            <td class="px-4 py-2 border-b">${device.lastPing}</td>
+            <td class="px-4 py-2 border-b">
+                <button class="text-blue-600 hover:text-blue-800 mr-2" onclick="pingDevice('${device.deviceId}')">
+                    <i class="fas fa-sync-alt"></i> Ping
+                </button>
+                <button class="text-gray-600 hover:text-gray-800" onclick="editDevice('${device.deviceId}')">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+            </td>
+        </tr>
+        `;
+    });
+
+    deviceList.innerHTML = html;
+}
+
+
+        function updateOrdersList() {
+            if (sampleOrders.length === 0) {
+                ordersList.innerHTML = `<tr><td colspan="8" class="px-4 py-6 text-center text-gray-500">No orders found</td></tr>`;
+                recentOrders.innerHTML = `<tr><td colspan="3" class="px-4 py-6 text-center text-gray-500">No recent orders</td></tr>`;
+                return;
+            }
+
+            let ordersHtml = '';
+            let recentHtml = '';
+
+            sampleOrders.forEach(order => {
+                let statusClass = '';
+                switch (order.status) {
+                    case 'Pending':
+                        statusClass = 'bg-yellow-100 text-yellow-800';
+                        break;
+                    case 'Dispensing':
+                        statusClass = 'bg-blue-100 text-blue-800';
+                        break;
+                    case 'Completed':
+                        statusClass = 'bg-green-100 text-green-800';
+                        break;
+                    case 'Rejected':
+                        statusClass = 'bg-red-100 text-red-800';
+                        break;
+                    default:
+                        statusClass = 'bg-gray-100 text-gray-800';
+                }
+
+                ordersHtml += `
+                <tr>
+                    <td class="px-4 py-2 border-b">
+                        <a href="#" class="text-blue-600 hover:text-blue-800" onclick="viewOrderDetails('${order._id}')">
+                            ${order._id}
+                        </a>
+                    </td>
+                    <td class="px-4 py-2 border-b">${order.vehicleNumber}</td>
+                    <td class="px-4 py-2 border-b">${order.owner}</td>
+                    <td class="px-4 py-2 border-b">${order.fuelType}</td>
+                    <td class="px-4 py-2 border-b">${order.amount}</td>
+                    <td class="px-4 py-2 border-b">
+                        <span class="px-2 py-1 rounded-full text-xs ${statusClass}">
+                            ${order.status}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2 border-b">${order.deviceId || '-'}</td>
+                    <td class="px-4 py-2 border-b">${new Date(order.date).toLocaleString()}</td>
+
+                </tr>
+                `;
+
+                // Add to recent orders on dashboard
+
+                recentHtml += `
+                <tr>
+                    <td class="px-4 py-2 border-b">${order._id}</td>
+                    <td class="px-4 py-2 border-b">${order.vehicleNumber}</td>
+                    <td class="px-4 py-2 border-b">
+                        <span class="px-2 py-1 rounded-full text-xs ${statusClass}">
+                            ${order.status}
+                        </span>
+                    </td>
+                </tr>
+                `;
+            });
+
+            ordersList.innerHTML = ordersHtml;
+            recentOrders.innerHTML = recentHtml;
+        }
+
+        function updateVehiclesList() {
+            if (sampleVehicles.length === 0) {
+                vehiclesList.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-gray-500">No vehicles found</td></tr>`;
+                return;
+            }
+
+            let html = '';
+
+            sampleVehicles.forEach(vehicle => {
+                html += `
+                <tr>
+                    <td class="px-4 py-2 border-b">${vehicle.registrationNo}</td>
+                    <td class="px-4 py-2 border-b">${vehicle.owner}</td>
+                    <td class="px-4 py-2 border-b">${vehicle.type}</td>
+                    <td class="px-4 py-2 border-b">
+                        <button class="text-blue-600 hover:text-blue-800" onclick="viewVehicleDetails('${vehicle.registrationNo}')">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                    </td>
+                </tr>
+                `;
+            });
+
+            vehiclesList.innerHTML = html;
+        }
+
+        function updateOrderStatus(orderId, status) {
+            const order = sampleOrders.find(o => o.id === orderId);
+            if (order) {
+                order.status = status;
+            }
+        }
+
+        // Modal Functions
+        function showAddDeviceModal() {
+            addDeviceModal.classList.remove('hidden');
+        }
+
+        function hideAddDeviceModal() {
+            addDeviceModal.classList.add('hidden');
+            deviceForm.reset();
+        }
+
+        function hideOrderModal() {
+            orderDetailsModal.classList.add('hidden');
+        }
+
+        function handleDeviceSubmit(e) {
+            e.preventDefault();
+
+            const formData = new FormData(deviceForm);
+            const deviceId = formData.get('deviceId');
+            const location = formData.get('location');
+            const description = formData.get('description');
+
+            // Add new device to the sample data
+            sampleDevices.push({
+                deviceId: deviceId,
+                location: location,
+                description: description,
+                status: 'Offline',
+                lastPing: new Date().toLocaleString()
+            });
+
+            // Update UI
+            updateDevicesList();
+            hideAddDeviceModal();
+            logEvent('system', `Device ${deviceId} registered`);
+
+            // In a real app, we would send this to the server
+            if (isConnected) {
+                socket.send(JSON.stringify({
+                    type: 'admin_register_device',
+                    deviceId: deviceId,
+                    location: location,
+                    description: description
+                }));
+            }
+        }
+
+        // Log functions
+        function logEvent(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = 'border-b pb-2 mb-2';
+
+            let icon = '';
+            let typeClass = '';
+
+            switch (type) {
+                case 'vehicle':
+                    icon = '<i class="fas fa-car"></i>';
+                    typeClass = 'text-blue-600';
+                    break;
+                case 'order':
+                    icon = '<i class="fas fa-file-invoice"></i>';
+                    typeClass = 'text-purple-600';
+                    break;
+                case 'dispensing':
+                    icon = '<i class="fas fa-gas-pump"></i>';
+                    typeClass = 'text-green-600';
+                    break;
+                case 'device':
+                    icon = '<i class="fas fa-microchip"></i>';
+                    typeClass = 'text-orange-600';
+                    break;
+                case 'system':
+                    icon = '<i class="fas fa-server"></i>';
+                    typeClass = 'text-gray-600';
+                    break;
+            }
+
+            logEntry.innerHTML = `
+                <div class="flex items-start">
+                    <div class="mr-2 ${typeClass}">${icon}</div>
+                    <div class="flex-grow">
+                        <div class="flex justify-between">
+                            <span class="font-medium ${typeClass}">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                            <span class="text-xs text-gray-500">${timestamp}</span>
+                        </div>
+                        <p class="text-sm">${message}</p>
+                    </div>
+                </div>
+            `;
+
+            logEntries.prepend(logEntry);
+
+            // Limit log entries to 100
+            if (logEntries.children.length > 100) {
+                logEntries.removeChild(logEntries.lastChild);
+            }
+        }
+
+        function logSystemEvent(message) {
+            logEvent('system', message);
+        }
+
+        // Device Actions
+        function pingDevice(deviceId) {
+            logEvent('device', `Pinging device ${deviceId}...`);
+
+            if (isConnected) {
+                socket.send(JSON.stringify({
+                    type: 'ping',
+                    deviceId: deviceId
+                }));
+            }
+        }
+
+        function editDevice(deviceId) {
+            // This would open a modal to edit the device
+            alert(`Edit device ${deviceId} functionality would be implemented here.`);
+        }
+
+        // Order Actions
+        function viewOrderDetails(orderId) {
+            const order = sampleOrders.find(o => o.id === orderId);
+            if (!order) return;
+
+            const orderDetailsContent = document.getElementById('order-details-content');
+
+            let statusClass = '';
+            switch (order.status) {
+                case 'Pending': statusClass = 'bg-yellow-100 text-yellow-800'; break;
+                case 'Dispensing': statusClass = 'bg-blue-100 text-blue-800'; break;
+                case 'Completed': statusClass = 'bg-green-100 text-green-800'; break;
+                case 'Rejected': statusClass = 'bg-red-100 text-red-800'; break;
+                default: statusClass = 'bg-gray-100 text-gray-800';
+            }
+
+            orderDetailsContent.innerHTML = `
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <p class="text-sm text-gray-500">Order ID</p>
+                        <p class="font-medium">${order.id}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Status</p>
+                        <p><span class="px-2 py-1 rounded-full text-xs ${statusClass}">${order.status}</span></p></div>
+                    <div>
+                        <p class="text-sm text-gray-500">Vehicle</p>
+                        <p class="font-medium">${order.vehicleNumber}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">User ID</p>
+                        <p class="font-medium">${order.userId}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Fuel Type</p>
+                        <p class="font-medium">${order.fuelType}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Amount</p>
+                        <p class="font-medium">${order.amount} Litres</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Device ID</p>
+                        <p class="font-medium">${order.deviceId || 'Not Assigned'}</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">Created At</p>
+                        <p class="font-medium">${order.createdAt}</p>
+                    </div>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <h4 class="font-medium mb-2">Actions</h4>
+                    <div class="flex space-x-2">
+                        ${order.status === 'Pending' ? `
+                        <button class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded" onclick="approveOrder('${order.id}')">
+                            Approve
+                        </button>
+                        <button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded" onclick="rejectOrder('${order.id}')">
+                            Reject
+                        </button>
+                        ` : ''}
+                        <button class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded" onclick="hideOrderModal()">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            orderDetailsModal.classList.remove('hidden');
+        }
+
+        function viewVehicleDetails(registrationNo) {
+            // This would open a modal with vehicle details
+            alert(`Vehicle details for ${registrationNo} would be displayed here.`);
+        }
+
+        function approveOrder(orderId) {
+            updateOrderStatus(orderId, 'Approved');
+            hideOrderModal();
+            updateOrdersList();
+            logEvent('order', `Order ${orderId} approved by admin`);
+        }
+
+        function rejectOrder(orderId) {
+            updateOrderStatus(orderId, 'Rejected');
+            hideOrderModal();
+            updateOrdersList();
+            logEvent('order', `Order ${orderId} rejected by admin`);
+        }
+
+        // Initialize on load
+        window.onload = function () {
+            initializePanel();
+        };
+
+        // Global functions for onclick handlers
+        window.pingDevice = pingDevice;
+        window.editDevice = editDevice;
+        window.viewOrderDetails = viewOrderDetails;
+        window.viewVehicleDetails = viewVehicleDetails;
+        window.approveOrder = approveOrder;
+        window.rejectOrder = rejectOrder;
+    </script>
+</body>
+
+</html>

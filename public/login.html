@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Fuel System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="w-full max-w-md bg-white shadow-lg rounded-lg p-6">
+        <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Admin Login</h2>
+        <form id="adminLoginForm">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input type="text" id="username" name="username" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="password" name="password" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div id="loginError" class="text-red-500 text-sm mb-4 hidden">Invalid credentials, please try again.</div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">Login</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById("adminLoginForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            
+            try {
+                const response = await fetch("http://localhost:3000/admin/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    localStorage.setItem("adminToken", data.token);
+                    window.location.href = ""; // Redirect to admin panel
+                } else {
+                    document.getElementById("loginError").classList.remove("hidden");
+                    document.getElementById("loginError").innerText = data.message || "Invalid credentials, please try again.";
+                }
+            } catch (error) {
+                console.error("Login error:", error);
+                document.getElementById("loginError").classList.remove("hidden");
+                document.getElementById("loginError").innerText = "Network error, please try again.";
+            }
+        });
+    </script>
+</body>
+</html>
