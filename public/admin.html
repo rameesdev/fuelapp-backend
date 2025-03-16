@@ -662,12 +662,12 @@
             activeDispensing.set(data.orderId, {
                 orderId: data.orderId,
                 litres: data.litres,
-                total: data.totalLitres,
-                percentage: Math.round((data.litres / data.total) * 100)
+                total: data.totallitres,
+                percentage: Math.round((data.litres / data.totallitres) * 100)
             });
 
             updateLiveDispensing();
-            logEvent('dispensing', `Dispensing progress: ${data.litres}L / ${data.total}L for order ${data.orderId}`);
+            logEvent('dispensing', `Dispensing progress: ${data.litres}L / ${data.totallitres}L for order ${data.orderId}`);
         }
 
         function handleDispensingComplete(data) {
