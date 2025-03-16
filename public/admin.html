@@ -662,7 +662,7 @@
             activeDispensing.set(data.orderId, {
                 orderId: data.orderId,
                 litres: data.litres,
-                total: data.total,
+                total: data.totalLitres,
                 percentage: Math.round((data.litres / data.total) * 100)
             });
 
