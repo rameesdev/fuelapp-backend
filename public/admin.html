@@ -469,7 +469,7 @@
         // Sample initial data (would be fetched from API in a real implementation)
         async function fetchAdminData() {
             try {
-                const response = await fetch("http://localhost:3000/admin/data", {
+                const response = await fetch("admin/data", {
                     method: "GET",
                     credentials: "include" // Ensures cookies are sent with request
                 });
